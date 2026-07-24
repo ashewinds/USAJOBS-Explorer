@@ -1,0 +1,12 @@
+# Secrets
+config/database_config.php
+config/key_cred.php
+
+# Personal notes and reference files
+documentation/
+
+# macOS
+.DS_Store
+
+# Office temporary files
+~$*
