@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../../config/bootstrap.php';
+require_once __DIR__ . '/../config/bootstrap.php';
 
 $desiredLocations = $locationList;
 $remoteCityString1 = "Anywhere in the U.S.";
@@ -147,6 +147,14 @@ $startRunStmt = $pdo->prepare("
     )
 ");
 
+$progressRunStmt = $pdo->prepare("
+    UPDATE import_runs
+    SET
+        jobs_found = :jobs_found,
+        pages = :pages
+    WHERE id = :id
+");
+
 $finishRunStmt = $pdo->prepare("
     UPDATE import_runs
     SET
@@ -185,8 +193,6 @@ $startRunStmt->execute([
 ]);
 
 $runId = (int) $pdo->lastInsertId();
-
-//$responseSaved = false;
 
 try {
 
@@ -429,6 +435,12 @@ try {
 
             $totalPages++;
 
+            $progressRunStmt->execute([
+                ":jobs_found" => $totalRecords,
+                ":pages" => $totalPages,
+                ":id" => $runId
+             ]);
+
             /* Current Historic API responses provide paging.next. 
             *. It is often a relative URL containing a continuation token. */
             $next = $decoded["paging"]["next"] ?? null;
@@ -464,24 +476,3 @@ try {
 
     throw $error;
 }
-
-
-/*
- -------------- LOG IMPORT RUN -------------- 
-
-$runStmt->execute([
-    ":series" => $series,
-    ":locations" => implode(
-        "; ", 
-        array_map(
-            fn($loc) => $loc["city"] . ", " . $loc["stateFull"],
-            $locations
-        )
-    ),
-    ":jobs_found" => $totalRecords,
-    ":pages" => $totalPages,
-    ":notes" => "Current Search API import"
-]);
-*/
-
-?>

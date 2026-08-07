@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/../../config/bootstrap.php';
+require_once __DIR__ . '/../config/bootstrap.php';
 
 $series = implode(';', $seriesList);
 
@@ -382,4 +382,3 @@ $runStmt->execute([
 echo "<h2>Import complete.</h2>";
 echo "<p><strong>Unique jobs saved/updated:</strong> " . count($uniqueJobs) . "</p>";
 echo "<p><strong>Total API pages read:</strong> {$totalPages}</p>";
-?>
