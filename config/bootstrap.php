@@ -14,4 +14,3 @@ require_once __DIR__ . '/key_cred.php';
 require_once __DIR__ . '/database_config.php';
 require_once __DIR__ . '/search_config.php';
 require_once __DIR__ . '/../includes/functions.php';
-?>
