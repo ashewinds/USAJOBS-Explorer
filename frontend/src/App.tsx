@@ -11,7 +11,7 @@ function App() {
   const [error, setError] = useState("");
   const [selectedSeries, setSelectedSeries] = useState("2210");
   const [selectedStatus, setSelectedStatus] = useState("Open");
-  const [selectedSort, setSelectedSort] = useState("closing-soon");
+  const [selectedSort, setSelectedSort] = useState("newest");
   const [selectedRemote, setSelectedRemote] = useState("all");
 
   const filteredJobs = jobs.filter(

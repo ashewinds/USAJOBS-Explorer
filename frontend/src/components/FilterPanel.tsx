@@ -52,8 +52,8 @@ export default function FilterPanel({
                         value={selectedSort}
                         onChange={(e) => onSortChange(e.target.value)}
                     >
-                        <option value="closing-soonest">Closing soon</option>
                         <option value="newest">Newest</option>
+                        <option value="closing-soonest">Closing soon</option>
                         <option value="grade-asc">Pay Plan & Grade (Ascending)</option>
                         <option value="grade-desc">Pay Plan & Grade (Descending)</option>
 

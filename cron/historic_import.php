@@ -16,13 +16,6 @@ $radialStmt = $pdo->query("
     WHERE exact_city_match = 0
 ");
 
-/*
-AND (
-            last_current_update IS NULL
-            OR DATE(last_current_update) < CURDATE()
-        )
-*/
-
 $radialJobs = $radialStmt->fetchAll(PDO::FETCH_COLUMN);
 
 echo "RADIAL COUNT: " . count($radialJobs);
@@ -259,7 +252,7 @@ try {
 
             if ($response === false) {
                 throw new RuntimeException(
-                    "Historic API cURL error: " . curl_error($ch)
+                    "Historic API cURL error: " . $curlError
                 );
             }
 
@@ -271,16 +264,6 @@ try {
                     "Historic API HTTP $httpCode: $response"
                 );
             }
-
-            /* used once to save raw response for inspecting the json
-            if (!$responseSaved) {
-                file_put_contents(
-                    __DIR__ . "/historic_response_json_from_script.json",
-                    $response
-                );
-                $responseSaved = true;
-            }
-            */
 
             $decoded = json_decode($response, true);
 
@@ -326,8 +309,6 @@ try {
                 $jobAlreadyExists = $existingJob !== false;
 
                 // query database to see what, if any, cities are already stored for this job announcement
-                $previouslySavedLocations = $existingStmt->fetchColumn();
-
                 $matchedLocationsJson = $jobAlreadyExists ? $existingJob["matched_search_locations"] : null;
 
                 // go thru each location listed on the job announcement
