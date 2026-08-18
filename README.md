@@ -1,77 +1,193 @@
 # USAJOBS Explorer
 
-A PHP and MariaDB application that collects, normalizes, stores, and analyzes current and historical federal job-announcement data from USAJOBS.
+USAJOBS Explorer is a personal full-stack project for exploring and analyzing federal job announcements from USAJOBS.
 
-## Overview
+It was built primarily to support a focused federal job search while also serving as a hands-on learning project involving React, TypeScript, PHP, MySQL/MariaDB, REST APIs, scheduled data imports, and structured AI analysis.
 
-USAJOBS Explorer began as a way to build a historical dataset for analyzing federal employment trends. The original goal was to answer questions such as whether opportunities in particular occupational series or geographic areas were increasing or decreasing over time.
+## Scope
 
-The application imports current adn historical USAJOBS announcements, maps data from differing API structures into a consistent database schema, preserves historical records, and prepares the information for searching, filtering, and trend analysis.
+USAJOBS Explorer is currently focused on two federal occupational series:
 
-The project currently tracks:
+- **0343** — Management and Program Analysis
+- **2210** — Information Technology Management
 
--   0343 - Management and Program Analysis
--   2210 - Information Technology Management
+The current data pipeline, filters, search locations, and interface reflect those use cases rather than the full USAJOBS catalog.
 
-## Project Goals
+## Features
 
--   Build a historical record of federal job announcments
--   Compare job availability across locations and time periods
--   Analyze trends within selected occupational series
--   Track remote, telework-eligible, full-time, and part-time opportunities
--   Preserve announcements after they are no longer available through the current-jobs API
--   Provide searchable data for both individual job research and broader employment analysis
+- Imports current and historical USAJOBS announcement data
+- Stores normalized job data in MySQL/MariaDB
+- Tracks current vs. closed job status
+- Supports filtering by:
+  - occupational series
+  - open/closed status
+  - remote availability
+- Supports sorting by:
+  - newest
+  - closing soonest
+  - pay plan / grade ascending
+  - pay plan / grade descending
+- Displays matched search locations and remote status
+- Links directly to the original USAJOBS announcement
+- Uses expandable job cards for additional details
+- Determines whether enough source data exists for AI analysis
+- Provides structured AI analysis for supported announcements
 
-## Current Features
+## AI Job Analysis
 
--   Imports current and historical USAJOBS announcements
--   Processes the 0343 and 2210 occupational series
--   Integrates multiple USAJOBS API structures
--   Maps API data into a consistent database schema
--   Stores announcement data in MariaDB
--   Avoids duplicate records using USAJOBS control numbers
--   Tracks when announcements were first and last observed
--   Identifies open and closed announcements
--   Preserves existing values when an API response does not contain updated information
--   Detects remote positions and selected geographic matches
--   Stores both normalized fields and original JSON data
--   Records import-run status and results
--   Supports scheduled automated imports
+The AI analysis feature is designed specifically for federal job announcements rather than as a generic summarizer.
+
+For jobs with sufficient source data, the application sends a normalized subset of the announcement to the OpenAI API and requests a strict structured response.
+
+The analysis includes:
+
+- Summary
+- Key duties
+- Specialized experience
+- Hiring eligibility
+- Education requirements
+- Security clearance
+- Important announcement-specific notes
+
+The prompt is designed to preserve distinctions between:
+
+- qualifications
+- hiring eligibility
+- duties
+- education substitution
+- conditions of employment
+- security requirements
+
+Structured Outputs are used so the model response follows a defined JSON schema before being rendered in the React interface.
+
+Historical records that do not contain enough detailed announcement data are not sent for AI analysis.
+
+## Data Pipeline
+
+The project uses scheduled PHP import scripts to retrieve and normalize USAJOBS data.
+
+The pipeline includes:
+
+- current-job imports
+- historical-job imports
+- long-text/detail imports
+- import run tracking
+- retry handling
+- historical import completion verification
+
+Maintenance scripts are kept separately from scheduled production import scripts.
+
+## Data Freshness
+
+USAJOBS Explorer reflects the most recent successful import from USAJOBS data sources.
+
+USAJOBS current listings, historical records, and public-facing job pages may update at different times. Because of this, an announcement's status in USAJOBS Explorer may temporarily differ from the live USAJOBS page between scheduled imports.
+
+For example, a job may disappear from the current USAJOBS feed before the historical API reflects its updated closing or cancellation status.
+
+The application can therefore only be as current as the structured data available from USAJOBS at the time of the most recent import.
 
 ## Tech Stack
 
-**Backend** - PHP - MariaDB / MySQL - SQL - cURL
+### Frontend
 
-**Frontend** - HTML - CSS - JavaScript
+- React
+- TypeScript
+- Vite
+- CSS
 
-**Tools** - Git - GitHub - VS Code - phpMyAdmin
+### Backend
 
-## What I Learned
+- PHP
+- PDO
+- MySQL / MariaDB
 
-This project strengthened my experience with:
+### APIs
 
--   REST API integration
--   JSON processing
--   Database schema design
--   SQL query optimization
--   Backend application architecture
--   Debugging complex data import workflows
--   Version control with Git
+- USAJOBS current API
+- USAJOBS historical JOA API
+- OpenAI Responses API
 
-## Future Improvements
+### Other
 
--   Responsive search interface
--   Advanced filtering
--   Email notifications
--   Analytics dashboard
--   Improved import monitoring
+- Scheduled cron jobs
+- JSON normalization
+- Structured prompting
+- Strict JSON-schema AI output
+- Git / GitHub
 
-## Status
+## Project Structure
 
-Active development
+```text
+USAJOBS Explorer/
+├── api/
+│   ├── analyze-job.php
+│   ├── job-ai-input.php
+│   ├── jobs.php
+│   ├── helpers/
+│   └── prompts/
+├── config/
+├── cron/
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   └── types/
+│   └── ...
+├── includes/
+├── maintenance/
+└── ...
+```
 
-This project is under active development. Current work focuses on completing the data-import and historical-tracking systems before expanding the analytical interface, filters, reports, and visualizations.
+Private configuration and credentials are excluded from Git.
 
-## Author
+## Frontend Deployment
 
-Ashley Vance
+The React frontend is built with Vite:
+
+```bash
+npm run build
+```
+
+Vite creates the production files in:
+
+```text
+frontend/dist/
+```
+
+The contents of `dist/` are deployed to the site's public web root.
+
+## Development Goals
+
+This project is both a working personal tool and a learning environment.
+
+Areas explored through the project include:
+
+- React component architecture
+- TypeScript typing
+- REST API integration
+- PHP backend endpoints
+- database normalization
+- scheduled data pipelines
+- structured LLM prompting
+- JSON schema enforcement
+- production deployment
+- operational reliability and monitoring
+
+## Future Ideas
+
+Possible future improvements include:
+
+- private resume-to-job comparison
+- authenticated candidate profiles
+- additional job-series support
+- more advanced filters
+- improved import monitoring
+- richer AI-assisted qualification analysis
+
+These are intentionally kept separate from the current working version.
+
+## Disclaimer
+
+This project is not affiliated with or endorsed by USAJOBS, the U.S. Office of Personnel Management, or any federal agency.
+
+Job seekers should always verify announcement details directly on the official USAJOBS listing before applying.

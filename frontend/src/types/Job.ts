@@ -1,6 +1,22 @@
 export type Job = {
     id: number;
+    control_number: number;
+    position_id: string;
     title: string;
-    grade: number;
-    remote: boolean;
+    department: string;
+    organization: string;
+    pay_plan: string;
+    grade_low: number | null;
+    grade_high: number | null;
+    is_remote: boolean;
+    applicant_limit: number | null;
+    series: string;
+    start_date: string;
+    end_date: string;
+    matched_search_locations: string[];
+    position_uri: string;
+    status: string;
+    position_opening_status: string;
+    actual_close_date: string;
+    has_analyzable_data: boolean;
 };

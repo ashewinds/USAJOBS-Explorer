@@ -8,6 +8,8 @@ $locations = $locationList;
 
 /* ------------ PREPARE INSERT ------------ */
 
+$pdo = $connectDatabase();
+
 $jobStmt = $pdo->prepare("
     INSERT INTO jobs
     (
@@ -43,6 +45,7 @@ $jobStmt = $pdo->prepare("
         clearance_required,
         is_remote,
         telework_eligible,
+        exact_city_match,
         first_api_to_update,
         last_api_to_update,
         last_current_update
@@ -81,6 +84,7 @@ $jobStmt = $pdo->prepare("
         :clearance_required,
         :is_remote,
         :telework_eligible,
+        :exact_city_match,
         'current',
         'current',
         NOW()
@@ -117,6 +121,7 @@ $jobStmt = $pdo->prepare("
         clearance_required = VALUES(clearance_required),
         is_remote = VALUES(is_remote),
         telework_eligible = VALUES(telework_eligible),
+        exact_city_match = GREATEST(exact_city_match, VALUES(exact_city_match)),
         first_api_to_update = COALESCE(first_api_to_update, 'current'),
         last_api_to_update = 'current',
         last_current_update = NOW()
@@ -169,7 +174,7 @@ foreach ($locations as $location) {
     $stateFull = $location["stateFull"];
     $radius = $location["radius"];
 
-    echo "<h2>Searching {$city}, {$stateCode} within {$radius} miles</h2>";
+    echo "<h2>Searching {$city}, {$stateFull} within {$radius} miles</h2>";
 
     $page = 1;
     $numberOfPages = 1;
@@ -237,6 +242,15 @@ foreach ($locations as $location) {
                 continue;
             }
 
+            // Look up any search locations already stored for this job
+            $existingStmt->execute([
+                ":control_number" => $controlNumber
+            ]);
+
+            $existingMatchedJson = $existingStmt->fetchColumn();
+
+            $cityAndState = $city . ", " . $stateFull;
+
             // Actual duty locations returned by USAJOBS
             $availableLocations = $job["PositionLocation"] ?? [];
 
@@ -245,17 +259,19 @@ foreach ($locations as $location) {
                 JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
             );
 
-            // Look up any search locations already stored for this job
-            $existingStmt->execute([
-                ":control_number" => $controlNumber
-            ]);
+            $exactCityMatch = 0;
 
-            $existingMatchedJson = $existingStmt->fetchColumn();
+            foreach ($availableLocations as $availableLoc) {
+                if ($availableLoc["LocationName"] === $cityAndState) {
+                    $exactCityMatch = 1;
+                    break;
+                }
+            }
 
             // Add the current search city without removing previous matches
             $matchedSearchLocationsJson = mergeMatchedLocation(
                 $existingMatchedJson ?: null,
-                $city
+                $cityAndState
             );
 
             $uniqueJobs[$controlNumber] = true;
@@ -352,7 +368,8 @@ foreach ($locations as $location) {
                 ":clearance_name" => $clearanceName,
                 ":clearance_required" => $clearanceRequired,
                 ":is_remote" => $isRemote,
-                ":telework_eligible" => $teleworkEligible
+                ":telework_eligible" => $teleworkEligible,
+                ":exact_city_match" => $exactCityMatch
             ]);
         }
 

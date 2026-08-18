@@ -8,6 +8,18 @@ $remoteCityString2 = "remote job";
 $totalRecords = 0;
 $totalPages = 0;
 
+$pdo = $connectDatabase();
+
+$radialStmt = $pdo->query("
+    SELECT control_number
+    FROM jobs
+    WHERE exact_city_match = 0
+");
+
+$radialJobs = $radialStmt->fetchAll(PDO::FETCH_COLUMN);
+
+echo "RADIAL COUNT: " . count($radialJobs);
+
 $stmt = $pdo->prepare("
     INSERT INTO jobs
     (
@@ -183,7 +195,7 @@ $seriesString = implode(";", $seriesList);
 
 $locationNames = [];
 foreach ($desiredLocations as $location) {
-    $locationNames[] = $location["city"] . ", " . $location["stateCode"];
+    $locationNames[] = $location["city"] . ", " . $location["stateFull"];
 }
 $locationsString = implode("; ", $locationNames);
 
@@ -207,20 +219,40 @@ try {
         $baseUrl = "https://data.usajobs.gov/api/historicjoa";
         $url = $baseUrl . "?" . http_build_query($historicParams);
 
+        $maxAttempts = 3;
+
         while ($url !== null) {
-            $ch = curl_init();
+            
+            $attempt = 0;
+            $response = false;
+            $curlError = "";
 
-            curl_setopt_array($ch, [
-                CURLOPT_URL => $url,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_TIMEOUT => 60
-            ]);
+            while ($attempt < $maxAttempts && $response === false) {
+                $attempt++;
 
-            $response = curl_exec($ch);
+                $ch = curl_init();
+
+                curl_setopt_array($ch, [
+                    CURLOPT_URL => $url,
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_TIMEOUT => 60
+                ]);
+
+                $response = curl_exec($ch);
+
+                if ($response === false) {
+                    $curlError = curl_error($ch);
+                    curl_close($ch);
+
+                    if ($attempt < $maxAttempts){
+                        sleep(2);
+                    }
+                }
+            }
 
             if ($response === false) {
                 throw new RuntimeException(
-                    "Historic API cURL error: " . curl_error($ch)
+                    "Historic API cURL error: " . $curlError
                 );
             }
 
@@ -232,16 +264,6 @@ try {
                     "Historic API HTTP $httpCode: $response"
                 );
             }
-
-            /* used once to save raw response for inspecting the json
-            if (!$responseSaved) {
-                file_put_contents(
-                    __DIR__ . "/historic_response_json_from_script.json",
-                    $response
-                );
-                $responseSaved = true;
-            }
-            */
 
             $decoded = json_decode($response, true);
 
@@ -282,10 +304,12 @@ try {
                     ":control_number" => $controlNumber
                 ]);
 
-                // query database to see what, if any, cities are already stored for this job announcement
-                $previouslySavedLocations = $existingStmt->fetchColumn();
+                $existingJob = $existingStmt->fetch(PDO::FETCH_ASSOC);
 
-                $matchedLocationsJson = $previouslySavedLocations !== false ? $previouslySavedLocations : null;
+                $jobAlreadyExists = $existingJob !== false;
+
+                // query database to see what, if any, cities are already stored for this job announcement
+                $matchedLocationsJson = $jobAlreadyExists ? $existingJob["matched_search_locations"] : null;
 
                 // go thru each location listed on the job announcement
                 foreach ($recLocations as $recLocation) {
@@ -302,7 +326,7 @@ try {
                         foreach ($desiredLocations as $desiredLocation) {
                             if ($recCity === $desiredLocation["city"] && ($recState === $desiredLocation["stateFull"] || $recState === $desiredLocation["stateCode"])) {
                                 $keepRecord = true;
-                                $locationToAdd = $recCity . ", " . $recState;
+                                $locationToAdd = $recCity . ", " . $desiredLocation["stateFull"];
                                 $matchedLocationsJson = mergeMatchedLocation($matchedLocationsJson, $locationToAdd);
                                 break;
                             }
@@ -310,8 +334,11 @@ try {
                     }
                 }
 
-                if (!$keepRecord) {
-                    continue;
+                if (!$keepRecord && !$jobAlreadyExists) {
+                    // check to see if stale record
+                    if (!in_array($controlNumber, $radialJobs, true)) {
+                        continue;
+                    }
                 }
 
                 $locationsJson = json_encode(
@@ -384,16 +411,23 @@ try {
                         $expireDate = null;
                 }
 
-                $effectiveCloseDate = $expireDate ?? $closeDate;
+                if ($expireDate !== null) {
+                    $expireDateObject = new DateTime($expireDate);
+                    $expireDateObject->setTime(0, 0, 1);
 
-                $status = "Unknown";
+                    $status = $expireDateObject < new DateTime() ? "Closed" : "Open";
 
-                if ($effectiveCloseDate !== null) {
-                    // set close status to take effect at 23:59:59
-                    $closeDateTime = new DateTime($effectiveCloseDate);
-                    $closeDateTime->setTime(23, 59, 59);
+                    $effectiveCloseDate = $expireDate;
+                } elseif ($closeDate !== null) {
+                    $closeDateObject = new DateTime($closeDate);
+                    $closeDateObject->setTime(23, 59, 59);
 
-                    $status = $closeDateTime < new DateTime() ? "Closed" : "Open";
+                    $status = $closeDateObject < new DateTime() ? "Closed" : "Open";
+
+                    $effectiveCloseDate = $closeDate;
+                } else {
+                    $status = "Unknown";
+                    $effectiveCloseDate = null;
                 }
 
                 $stmt->execute([
