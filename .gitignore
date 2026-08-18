@@ -1,6 +1,7 @@
 # Secrets
 config/database_config.php
 config/key_cred.php
+config/openai_config.php
 
 # Personal notes and reference files
 documentation/

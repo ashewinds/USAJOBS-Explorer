@@ -1,9 +1,7 @@
 <?php
-
-
 /* ------------ HELPER FUNCTION ----------- */
 
-function mergeMatchedLocation(?string $existingJson, string $city): string 
+function mergeMatchedLocation(?string $existingJson, string $cityAndState): string 
 {
     $locations = [];
 
@@ -15,8 +13,8 @@ function mergeMatchedLocation(?string $existingJson, string $city): string
         }
     }
 
-    if (!in_array($city, $locations, true)) {
-        $locations[] = $city;
+    if (!in_array($cityAndState, $locations, true)) {
+        $locations[] = $cityAndState;
     }
 
     return json_encode(
@@ -39,5 +37,3 @@ function normalizeHistoricDate(?string $value): ?string
 
     return date("Y-m-d H:i:s", $timestamp);
 }
-
-?>
